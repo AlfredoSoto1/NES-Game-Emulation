@@ -235,58 +235,58 @@ palettes:
   .byte $0f, $00, $00, $00
 
 full_wall_top:
-  .byte $04, $05, $04, $05, $04, $05, $04, $05
-  .byte $04, $05, $04, $05, $04, $05, $04, $05
-  .byte $04, $05, $04, $05, $04, $05, $04, $05
-  .byte $04, $05, $04, $05, $04, $05, $04, $05
+  .byte $05, $06, $05, $06, $05, $06, $05, $06
+  .byte $05, $06, $05, $06, $05, $06, $05, $06
+  .byte $05, $06, $05, $06, $05, $06, $05, $06
+  .byte $05, $06, $05, $06, $05, $06, $05, $06
 
 full_wall_bottom:
-  .byte $06, $07, $06, $07, $06, $07, $06, $07
-  .byte $06, $07, $06, $07, $06, $07, $06, $07
-  .byte $06, $07, $06, $07, $06, $07, $06, $07
-  .byte $06, $07, $06, $07, $06, $07, $06, $07
+  .byte $07, $08, $07, $08, $07, $08, $07, $08
+  .byte $07, $08, $07, $08, $07, $08, $07, $08
+  .byte $07, $08, $07, $08, $07, $08, $07, $08
+  .byte $07, $08, $07, $08, $07, $08, $07, $08
 
 ; Pillar row: brick A at cols 0,2,4,6,8,10,12,14 and col 15 (right border)
 ; Floor (tile 0) at cols 1,3,5,7,9,11,13  – floor shows green via bg color
 pillar_row_top:
-  .byte $04, $05, $00, $00, $04, $05, $00, $00
-  .byte $04, $05, $00, $00, $04, $05, $00, $00
-  .byte $04, $05, $00, $00, $04, $05, $00, $00
-  .byte $04, $05, $00, $00, $04, $05, $04, $05
+  .byte $05, $06, $00, $00, $05, $06, $00, $00
+  .byte $05, $06, $00, $00, $05, $06, $00, $00
+  .byte $05, $06, $00, $00, $05, $06, $00, $00
+  .byte $05, $06, $00, $00, $05, $06, $05, $06
 
 pillar_row_bottom:
-  .byte $06, $07, $00, $00, $06, $07, $00, $00
-  .byte $06, $07, $00, $00, $06, $07, $00, $00
-  .byte $06, $07, $00, $00, $06, $07, $00, $00
-  .byte $06, $07, $00, $00, $06, $07, $06, $07
+  .byte $07, $08, $00, $00, $07, $08, $00, $00
+  .byte $07, $08, $00, $00, $07, $08, $00, $00
+  .byte $07, $08, $00, $00, $07, $08, $00, $00
+  .byte $07, $08, $00, $00, $07, $08, $07, $08
 
 ; Soft row A: interior rows with soft B and floor gaps (no spawn-corner safety needed)
 ; col 0,15 = border A | interior = B blocks with floor gaps every 3rd metatile
 soft_row_a_top:
-  .byte $04, $05, $08, $09, $08, $09, $00, $00
-  .byte $08, $09, $08, $09, $00, $00, $08, $09
-  .byte $00, $00, $08, $09, $08, $09, $00, $00
-  .byte $08, $09, $08, $09, $00, $00, $04, $05
+  .byte $05, $06, $09, $0A, $09, $0A, $00, $00
+  .byte $09, $0A, $09, $0A, $00, $00, $09, $0A
+  .byte $00, $00, $09, $0A, $09, $0A, $00, $00
+  .byte $09, $0A, $09, $0A, $00, $00, $05, $06
 
 soft_row_a_bottom:
-  .byte $06, $07, $0A, $0B, $0A, $0B, $00, $00
-  .byte $0A, $0B, $0A, $0B, $00, $00, $0A, $0B
-  .byte $00, $00, $0A, $0B, $0A, $0B, $00, $00
-  .byte $0A, $0B, $0A, $0B, $00, $00, $06, $07
+  .byte $07, $08, $0B, $0C, $0B, $0C, $00, $00
+  .byte $0B, $0C, $0B, $0C, $00, $00, $0B, $0C
+  .byte $00, $00, $0B, $0C, $0B, $0C, $00, $00
+  .byte $0B, $0C, $0B, $0C, $00, $00, $07, $08
 
 ; Soft row B: spawn-safe rows (rows 1 and 13, just inside top/bottom border)
 ; cols 1-2 and cols 13-14 are free floor tiles to protect player spawn zones
 soft_row_b_top:
-  .byte $04, $05, $00, $00, $00, $00, $08, $09
-  .byte $08, $09, $08, $09, $00, $00, $08, $09
-  .byte $08, $09, $00, $00, $08, $09, $08, $09
-  .byte $08, $09, $00, $00, $00, $00, $04, $05
+  .byte $05, $06, $00, $00, $00, $00, $09, $0A
+  .byte $09, $0A, $09, $0A, $00, $00, $09, $0A
+  .byte $09, $0A, $00, $00, $09, $0A, $09, $0A
+  .byte $09, $0A, $00, $00, $00, $00, $05, $06
 
 soft_row_b_bottom:
-  .byte $06, $07, $00, $00, $00, $00, $0A, $0B
-  .byte $0A, $0B, $0A, $0B, $00, $00, $0A, $0B
-  .byte $0A, $0B, $00, $00, $0A, $0B, $0A, $0B
-  .byte $0A, $0B, $00, $00, $00, $00, $06, $07
+  .byte $07, $08, $00, $00, $00, $00, $0B, $0C
+  .byte $0B, $0C, $0B, $0C, $00, $00, $0B, $0C
+  .byte $0B, $0C, $00, $00, $0B, $0C, $0B, $0C
+  .byte $0B, $0C, $00, $00, $00, $00, $07, $08
 
 ; Each attribute byte covers a 4x4 tile block (2 metatile cols x 2 metatile rows)
 ; Bit layout: [bits 7-6: BR] [bits 5-4: BL] [bits 3-2: TR] [bits 1-0: TL]
@@ -308,161 +308,160 @@ attr_row_odd:
 
 
 .segment "CHR"
-.incbin "graphics.chr"
-;chr_start:
-;; ----------------
-;; tile 0 = empty
-;; ----------------
-;.byte $00, $00, $00, $00, $00, $00, $00, $00
-;.byte $00, $00, $00, $00, $00, $00, $00, $00
-;
-;; ----------------
-;; tile 1 = 'H'
-;; ----------------
-;  .byte %11000011
-;  .byte %11000011
-;  .byte %11000011
-;  .byte %11111111
-;  .byte %11111111
-;  .byte %11000011
-;  .byte %11000011
-;  .byte %11000011
-;  ; plane 1
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;
-;; ----------------
-;; tile 2 = 'E'
-;; ----------------
-;  .byte %11111111
-;  .byte %11111111
-;  .byte %11000000
-;  .byte %11111100
-;  .byte %11111100
-;  .byte %11000000
-;  .byte %11111111
-;  .byte %11111111
-;  ; plane 1
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;
-;; ----------------
-;; tile 3 = 'L'
-;; ----------------
-;  .byte %11000000
-;  .byte %11000000
-;  .byte %11000000
-;  .byte %11000000
-;  .byte %11000000
-;  .byte %11000000
-;  .byte %11111111
-;  .byte %11111111
-;  ; plane 1
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;
-;; ----------------
-;; tile 4 = 'O'
-;; ----------------
-;  .byte %00111100
-;  .byte %01100110
-;  .byte %11000011
-;  .byte %11000011
-;  .byte %11000011
-;  .byte %11000011
-;  .byte %01100110
-;  .byte %00111100
-;  ; plane 1
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;  .byte %00000000
-;
-;; ----------------
-;; tile 5 = brick A (top-left 8x8)
-;; ----------------
-;  .byte $FF, $FF, $40, $3F, $7F, $00, $0F, $FF
-;  ; plane 1
-;  .byte $FF, $FF, $80, $00, $00, $7F, $FF, $04
-;
-;; ----------------
-;; tile 6 = brick A (top-right 8x8)
-;; ----------------
-;  .byte $FF, $FF, $03, $FF, $FD, $01, $00, $FF
-;  ; plane 1
-;  .byte $FF, $FF, $01, $01, $03, $FF, $FF, $00
-;
-;; ----------------
-;; tile 7 = brick A (bottom-left 8x8)
-;; ----------------
-;  .byte $FF, $FB, $04, $00, $00, $FF, $FF, $00
-;  ; plane 1
-;  .byte $04, $04, $FF, $FF, $00, $00, $00, $FF
-;
-;; ----------------
-;; tile 8 = brick A (bottom-right 8x8)
-;; ----------------
-;  .byte $FF, $FF, $00, $60, $E0, $BF, $BF, $60
-;  ; plane 1
-;  .byte $00, $00, $FF, $FF, $60, $40, $40, $DF
-;
-;; ----------------
-;; tile 9 = brick B (top-left 8x8)  (bevel: bright top/left edge)
-;; color3 = top/left edge, color1 = fill
-;; ----------------
-;  ; plane 0
-;  .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
-;  ; plane 1
-;  .byte $FF, $80, $80, $80, $80, $80, $80, $80
-;
-;; ----------------
-;; tile 10 = brick B (top-right 8x8)
-;; color3 = top edge, color2 = right edge, color1 = fill
-;; ----------------
-;  ; plane 0
-;  .byte $FF, $FE, $FE, $FE, $FE, $FE, $FE, $FE
-;  ; plane 1
-;  .byte $FF, $01, $01, $01, $01, $01, $01, $01
-;
-;; ----------------
-;; tile 11 = brick B (bottom-left 8x8)
-;; color3 = left edge, color2 = bottom edge (entire last row)
-;; ----------------
-;  ; plane 0
-;  .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $00
-;  ; plane 1
-;  .byte $80, $80, $80, $80, $80, $80, $80, $FF
-;
-;; ----------------
-;; tile 12 = brick B (bottom-right 8x8)
-;; color2 = right edge and bottom edge (entire last row)
-;; ----------------
-;  ; plane 0
-;  .byte $FE, $FE, $FE, $FE, $FE, $FE, $FE, $00
-;  ; plane 1
-;  .byte $01, $01, $01, $01, $01, $01, $01, $FF
-;
-;; Pad remaining CHR ROM to 8KB (1 bank)
-;.res $2000 - (* - chr_start)
+chr_start:
+; ----------------
+; tile 0 = empty
+; ----------------
+.byte $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00
+
+; ----------------
+; tile 1 = 'H'
+; ----------------
+  .byte %11000011
+  .byte %11000011
+  .byte %11000011
+  .byte %11111111
+  .byte %11111111
+  .byte %11000011
+  .byte %11000011
+  .byte %11000011
+  ; plane 1
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+
+; ----------------
+; tile 2 = 'E'
+; ----------------
+  .byte %11111111
+  .byte %11111111
+  .byte %11000000
+  .byte %11111100
+  .byte %11111100
+  .byte %11000000
+  .byte %11111111
+  .byte %11111111
+  ; plane 1
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+
+; ----------------
+; tile 3 = 'L'
+; ----------------
+  .byte %11000000
+  .byte %11000000
+  .byte %11000000
+  .byte %11000000
+  .byte %11000000
+  .byte %11000000
+  .byte %11111111
+  .byte %11111111
+  ; plane 1
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+
+; ----------------
+; tile 4 = 'O'
+; ----------------
+  .byte %00111100
+  .byte %01100110
+  .byte %11000011
+  .byte %11000011
+  .byte %11000011
+  .byte %11000011
+  .byte %01100110
+  .byte %00111100
+  ; plane 1
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+  .byte %00000000
+
+; ----------------
+; tile 5 = brick A (top-left 8x8)
+; ----------------
+  .byte $FF, $FF, $40, $3F, $7F, $00, $0F, $FF
+  ; plane 1
+  .byte $FF, $FF, $80, $00, $00, $7F, $FF, $04
+
+; ----------------
+; tile 6 = brick A (top-right 8x8)
+; ----------------
+  .byte $FF, $FF, $03, $FF, $FD, $01, $00, $FF
+  ; plane 1
+  .byte $FF, $FF, $01, $01, $03, $FF, $FF, $00
+
+; ----------------
+; tile 7 = brick A (bottom-left 8x8)
+; ----------------
+  .byte $FF, $FB, $04, $00, $00, $FF, $FF, $00
+  ; plane 1
+  .byte $04, $04, $FF, $FF, $00, $00, $00, $FF
+
+; ----------------
+; tile 8 = brick A (bottom-right 8x8)
+; ----------------
+  .byte $FF, $FF, $00, $60, $E0, $BF, $BF, $60
+  ; plane 1
+  .byte $00, $00, $FF, $FF, $60, $40, $40, $DF
+
+; ----------------
+; tile 9 = brick B (top-left 8x8)  (bevel: bright top/left edge)
+; color3 = top/left edge, color1 = fill
+; ----------------
+  ; plane 0
+  .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+  ; plane 1
+  .byte $FF, $80, $80, $80, $80, $80, $80, $80
+
+; ----------------
+; tile 10 = brick B (top-right 8x8)
+; color3 = top edge, color2 = right edge, color1 = fill
+; ----------------
+  ; plane 0
+  .byte $FF, $FE, $FE, $FE, $FE, $FE, $FE, $FE
+  ; plane 1
+  .byte $FF, $01, $01, $01, $01, $01, $01, $01
+
+; ----------------
+; tile 11 = brick B (bottom-left 8x8)
+; color3 = left edge, color2 = bottom edge (entire last row)
+; ----------------
+  ; plane 0
+  .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $00
+  ; plane 1
+  .byte $80, $80, $80, $80, $80, $80, $80, $FF
+
+; ----------------
+; tile 12 = brick B (bottom-right 8x8)
+; color2 = right edge and bottom edge (entire last row)
+; ----------------
+  ; plane 0
+  .byte $FE, $FE, $FE, $FE, $FE, $FE, $FE, $00
+  ; plane 1
+  .byte $01, $01, $01, $01, $01, $01, $01, $FF
+
+; Pad remaining CHR ROM to 8KB (1 bank)
+.res $2000 - (* - chr_start)

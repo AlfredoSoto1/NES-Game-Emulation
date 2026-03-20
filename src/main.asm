@@ -1,305 +1,64 @@
 .include "constants.inc"
 .include "header.inc"
 
-; ===========================================================
-; Zero-page variables  (allocated by nes.cfg ZEROPAGE at $10)
-; These act as the "per-draw-call uniform parameters" in the
-; classic CPU-side rendering pipeline.
-; ===========================================================
 .segment "ZEROPAGE"
-oam_offset:    .res 1   ; byte offset into the OAM shadow buffer (0..252)
-char_x:        .res 1   ; X position passed to draw_character
-char_y:        .res 1   ; Y position passed to draw_character
-char_frame:    .res 1   ; animation frame index passed to draw_character
-char_attr:     .res 1   ; OAM attribute byte (palette + flip flags)
-tile_base:     .res 1   ; scratch: char_frame * 4
-frame_counter: .res 1   ; counts VBlanks 0..59; resets every second (60 Hz)
-anim_frame:    .res 1   ; current animation step: 0=Idle, 1=A, 2=B
-nmi_flag:      .res 1   ; set to 1 by NMI handler, cleared by main loop
+map_ptr_lo:   .res 1
+map_ptr_hi:   .res 1
+packed0:      .res 1
+packed1:      .res 1
+packed2:      .res 1
+packed3:      .res 1
+packed_byte:  .res 1
+rows_left:    .res 1
 
-; ===========================================================
-; OAM shadow buffer at $0200 (64 entries × 4 bytes = 256 B)
-; The PPU's internal OAM is refreshed every frame via OAMDMA.
-; ===========================================================
-.segment "OAM"
-oam_buf:    .res 256
-
-; ===========================================================
-; CODE
-; ===========================================================
 .segment "CODE"
 
 .proc irq_handler
   RTI
 .endproc
 
-; -----------------------------------------------------------
-; nmi_handler  – fires every VBlank (~60 Hz)
-;   1. Submits OAM DMA so the PPU sees the latest shadow buffer.
-;   2. Ticks frame_counter; every 60 ticks (1 second) it advances
-;      anim_frame through 0 → 1 → 2 → 0.
-;   3. Sets nmi_flag so the main loop knows to redraw.
-; -----------------------------------------------------------
 .proc nmi_handler
-  PHA
-  TXA
-  PHA
-  TYA
-  PHA
-
-  ; Submit OAM DMA
-  LDA #$02
-  STA OAMDMA
-
-  ; Advance frame counter
-  INC frame_counter
-  LDA frame_counter
-  CMP #60
-  BNE :+
-  LDA #$00
-  STA frame_counter
-  ; Advance animation step (0 → 1 → 2 → 0)
-  INC anim_frame
-  LDA anim_frame
-  CMP #3
-  BNE :+
-  LDA #$00
-  STA anim_frame
-:
-  LDA #$01
-  STA nmi_flag
-
-  PLA
-  TAY
-  PLA
-  TAX
-  PLA
   RTI
 .endproc
 
 .import reset_handler
 
-; -----------------------------------------------------------
-; draw_character
-; "Submit a draw call": write 4 OAM entries for a 16×16
-; character sprite (2×2 tiles).
-;
-; Inputs  (zero-page):
-;   char_frame  – animation frame index (0..5)
-;   char_x      – left edge in pixels
-;   char_y      – top  edge in pixels
-;   char_attr   – OAM attribute byte (palette, H/V flip)
-;
-; Tile layout assumed in sprite pattern table ($1000):
-;   frame N → TL=$4N  TR=$4N+1  BL=$4N+2  BR=$4N+3
-;
-; Clobbers: A, X
-; -----------------------------------------------------------
-.proc draw_character
-  ; tile_base = char_frame * 4
-  LDA char_frame
-  ASL A
-  ASL A
-  STA tile_base
-
-  LDX oam_offset       ; X = current write position in oam_buf
-
-  ; ---- top-left 8×8 sprite ----
-  LDA char_y
-  STA oam_buf,X        ; [0] Y
-  INX
-  LDA tile_base        ; tile TL = base + 0
-  STA oam_buf,X        ; [1] tile
-  INX
-  LDA char_attr
-  STA oam_buf,X        ; [2] attributes
-  INX
-  LDA char_x
-  STA oam_buf,X        ; [3] X
-  INX
-
-  ; ---- top-right 8×8 sprite ----
-  LDA char_y
-  STA oam_buf,X        ; [0] Y
-  INX
-  LDA tile_base
-  CLC
-  ADC #$01             ; tile TR = base + 1
-  STA oam_buf,X        ; [1] tile
-  INX
-  LDA char_attr
-  STA oam_buf,X        ; [2] attributes
-  INX
-  LDA char_x
-  CLC
-  ADC #$08             ; X + 8 (right half)
-  STA oam_buf,X        ; [3] X
-  INX
-
-  ; ---- bottom-left 8×8 sprite ----
-  LDA char_y
-  CLC
-  ADC #$08             ; Y + 8 (bottom half)
-  STA oam_buf,X        ; [0] Y
-  INX
-  LDA tile_base
-  CLC
-  ADC #$02             ; tile BL = base + 2
-  STA oam_buf,X        ; [1] tile
-  INX
-  LDA char_attr
-  STA oam_buf,X        ; [2] attributes
-  INX
-  LDA char_x
-  STA oam_buf,X        ; [3] X
-  INX
-
-  ; ---- bottom-right 8×8 sprite ----
-  LDA char_y
-  CLC
-  ADC #$08
-  STA oam_buf,X        ; [0] Y
-  INX
-  LDA tile_base
-  CLC
-  ADC #$03             ; tile BR = base + 3
-  STA oam_buf,X        ; [1] tile
-  INX
-  LDA char_attr
-  STA oam_buf,X        ; [2] attributes
-  INX
-  LDA char_x
-  CLC
-  ADC #$08
-  STA oam_buf,X        ; [3] X
-  INX
-
-  STX oam_offset       ; save updated write position
-  RTS
-.endproc
-
-; -----------------------------------------------------------
-; draw_character_flipped
-; Same as draw_character but swaps TL↔TR and BL↔BR tiles so
-; that the 16×16 meta-sprite appears horizontally mirrored.
-; OAM_FLIP_H must be set in char_attr to flip each 8×8 tile.
-; Used for right-facing poses (reuses left-facing tiles).
-;
-; Inputs  (zero-page): char_frame, char_x, char_y, char_attr
-; (char_attr should include OAM_FLIP_H = %01000000)
-; Clobbers: A, X
-; -----------------------------------------------------------
-.proc draw_character_flipped
-  LDA char_frame
-  ASL A
-  ASL A
-  STA tile_base
-
-  LDX oam_offset
-
-  ; ---- top-left position → uses TR tile (base+1) + h-flip ----
-  LDA char_y
-  STA oam_buf,X
-  INX
-  LDA tile_base
-  CLC
-  ADC #$01             ; TR tile (visually becomes left-half after flip)
-  STA oam_buf,X
-  INX
-  LDA char_attr
-  STA oam_buf,X
-  INX
-  LDA char_x
-  STA oam_buf,X
-  INX
-
-  ; ---- top-right position → uses TL tile (base+0) + h-flip ----
-  LDA char_y
-  STA oam_buf,X
-  INX
-  LDA tile_base        ; TL tile (visually becomes right-half after flip)
-  STA oam_buf,X
-  INX
-  LDA char_attr
-  STA oam_buf,X
-  INX
-  LDA char_x
-  CLC
-  ADC #$08
-  STA oam_buf,X
-  INX
-
-  ; ---- bottom-left position → uses BR tile (base+3) + h-flip ----
-  LDA char_y
-  CLC
-  ADC #$08
-  STA oam_buf,X
-  INX
-  LDA tile_base
-  CLC
-  ADC #$03
-  STA oam_buf,X
-  INX
-  LDA char_attr
-  STA oam_buf,X
-  INX
-  LDA char_x
-  STA oam_buf,X
-  INX
-
-  ; ---- bottom-right position → uses BL tile (base+2) + h-flip ----
-  LDA char_y
-  CLC
-  ADC #$08
-  STA oam_buf,X
-  INX
-  LDA tile_base
-  CLC
-  ADC #$02
-  STA oam_buf,X
-  INX
-  LDA char_attr
-  STA oam_buf,X
-  INX
-  LDA char_x
-  CLC
-  ADC #$08
-  STA oam_buf,X
-  INX
-
-  STX oam_offset
-  RTS
-.endproc
-
 .export main
 .proc main
-  ; ---- Load palettes ----
-  LDX PPUSTATUS
+  ; ------------------------------------------------------------
+  ; Write palettes
+  ; ------------------------------------------------------------
+  LDA PPUSTATUS
   LDX #$3F
   STX PPUADDR
   LDX #$00
   STX PPUADDR
+
+  LDX #$00
 load_palettes:
-  LDA palettes,X
+  LDA palettes, X
   STA PPUDATA
   INX
   CPX #$20
   BNE load_palettes
 
-  ; ---- Reset scroll ----
+  ; reset scroll to (0,0)
   LDA #$00
   STA PPUSCROLL
   STA PPUSCROLL
 
-  ; ---- Clear nametable ----
+  ; ------------------------------------------------------------
+  ; Clear nametable to remove garbage data
+  ; ------------------------------------------------------------
   LDA PPUSTATUS
   LDA #$20
   STA PPUADDR
   LDA #$00
   STA PPUADDR
-  LDA #$00
+
+  LDA #$00 ; tile 0 (empty / floor)
   LDX #$00
-  LDY #$04
+  LDY #$04 ; 4 pages = 1024 bytes
 clear_nametable:
   STA PPUDATA
   INX
@@ -307,118 +66,384 @@ clear_nametable:
   DEY
   BNE clear_nametable
 
-  ; ---- Initialize counters ----
+  ; ------------------------------------------------------------
+  ; Draw one full screen using 2-bit compressed metatiles
+  ; 15 metatile rows x 16 metatile cols
+  ; ------------------------------------------------------------
+  LDA PPUSTATUS
+  LDA #$20
+  STA PPUADDR
   LDA #$00
-  STA frame_counter
-  STA anim_frame
-  STA nmi_flag
-  STA oam_offset
+  STA PPUADDR
 
-  ; ---- Pre-clear OAM shadow buffer ----
-  LDA #$FF
+  JSR draw_compressed_nametable
+
+  ; ------------------------------------------------------------
+  ; Full attribute table ($23C0-$23FF): 64 bytes
+  ; Same attribute content as the original program
+  ; ------------------------------------------------------------
+  LDA PPUSTATUS
+  LDA #$23
+  STA PPUADDR
+  LDA #$C0
+  STA PPUADDR
+
+  LDY #$08
+draw_attr_rows:
+  TYA
+  AND #$01
+  BEQ use_attr_even_row
+
+use_attr_odd_row:
   LDX #$00
-clear_oam_init:
-  STA oam_buf,X
+attr_odd_copy:
+  LDA attr_row_odd, X
+  STA PPUDATA
   INX
-  BNE clear_oam_init
+  CPX #$08
+  BNE attr_odd_copy
+  JMP next_attr_row
 
-  ; ---- Wait for VBlank, then enable NMI + rendering ----
+use_attr_even_row:
+  LDX #$00
+attr_even_copy:
+  LDA attr_row_even, X
+  STA PPUDATA
+  INX
+  CPX #$08
+  BNE attr_even_copy
+
+next_attr_row:
+  DEY
+  BNE draw_attr_rows
+
 vblankwait:
   BIT PPUSTATUS
   BPL vblankwait
-  LDA #%10001000       ; NMI on | sprites at $1000 | BG at $0000
+
+  LDA #%10000000  ; turn on NMIs, sprites use first pattern table
   STA PPUCTRL
-  LDA #%00011110       ; BG + sprites enabled
+  LDA #%00011110  ; turn on screen
   STA PPUMASK
 
-  ; ---- Main loop: redraw 4 characters every VBlank ----
-  ; Characters (all at Y=112, 32px apart, centred on 256px screen):
-  ;   Left  X= 72 ($48)   Right X=104 ($68)
-  ;   Up    X=136 ($88)   Down  X=168 ($A8)
 forever:
-  LDA nmi_flag
-  BEQ forever          ; wait for NMI signal
-  LDA #$00
-  STA nmi_flag
-
-  ; Clear OAM shadow
-  LDA #$FF
-  LDX #$00
-clear_oam:
-  STA oam_buf,X
-  INX
-  BNE clear_oam
-  LDA #$00
-  STA oam_offset
-
-  ; -- Left animation --
-  LDA #FRAME_LEFT_IDLE ; IDLE/A/B are consecutive, add anim_frame (0/1/2)
-  CLC
-  ADC anim_frame
-  STA char_frame
-  LDA #OAM_PALETTE_0
-  STA char_attr
-  LDA #$48             ; X = 72
-  STA char_x
-  LDA #$70             ; Y = 112
-  STA char_y
-  JSR draw_character
-
-  ; -- Right animation --
-  LDA #FRAME_RIGHT_IDLE
-  CLC
-  ADC anim_frame
-  STA char_frame
-  LDA #OAM_PALETTE_0
-  STA char_attr
-  LDA #$68             ; X = 104
-  STA char_x
-  LDA #$70
-  STA char_y
-  JSR draw_character
-
-  ; -- Up animation --
-  LDA #FRAME_UP_IDLE
-  CLC
-  ADC anim_frame
-  STA char_frame
-  LDA #OAM_PALETTE_0
-  STA char_attr
-  LDA #$88             ; X = 136
-  STA char_x
-  LDA #$70
-  STA char_y
-  JSR draw_character
-
-  ; -- Down animation --
-  LDA #FRAME_DOWN_IDLE
-  CLC
-  ADC anim_frame
-  STA char_frame
-  LDA #OAM_PALETTE_0
-  STA char_attr
-  LDA #$A8             ; X = 168
-  STA char_x
-  LDA #$70
-  STA char_y
-  JSR draw_character
-
   JMP forever
 .endproc
+
+
+; ============================================================
+; Draw compressed nametable
+;
+; Each metatile is 2x2 tiles:
+;   0 = floor      -> tiles 00 00 / 00 00
+;   1 = hard wall  -> tiles 04 05 / 06 07
+;   2 = soft block -> tiles 08 09 / 0A 0B
+;   3 = unused
+;
+; Map is 15 rows x 16 metatiles = 240 metatiles
+; Packed at 2 bits each => 60 bytes total
+; 4 metatiles per byte
+; ============================================================
+.proc draw_compressed_nametable
+  LDA #<screen_map_2bit
+  STA map_ptr_lo
+  LDA #>screen_map_2bit
+  STA map_ptr_hi
+
+  LDA #$0F
+  STA rows_left
+
+row_loop:
+  ; read 4 packed bytes = 16 metatiles for this row
+  LDY #$00
+  LDA (map_ptr_lo), Y
+  STA packed0
+  INY
+  LDA (map_ptr_lo), Y
+  STA packed1
+  INY
+  LDA (map_ptr_lo), Y
+  STA packed2
+  INY
+  LDA (map_ptr_lo), Y
+  STA packed3
+
+  ; advance the pointer by 4 bytes
+  CLC
+  LDA map_ptr_lo
+  ADC #$04
+  STA map_ptr_lo
+  LDA map_ptr_hi
+  ADC #$00
+  STA map_ptr_hi
+
+  ; write top tile row for the 16 metatiles (32 tiles)
+  LDA packed0
+  JSR emit_four_top
+  LDA packed1
+  JSR emit_four_top
+  LDA packed2
+  JSR emit_four_top
+  LDA packed3
+  JSR emit_four_top
+
+  ; write bottom tile row for the same 16 metatiles (32 tiles)
+  LDA packed0
+  JSR emit_four_bottom
+  LDA packed1
+  JSR emit_four_bottom
+  LDA packed2
+  JSR emit_four_bottom
+  LDA packed3
+  JSR emit_four_bottom
+
+  DEC rows_left
+  BNE row_loop
+
+  RTS
+.endproc
+
+
+; ============================================================
+; Input:
+;   A = one packed byte containing 4 metatiles
+; Format:
+;   bits 7-6 = metatile 0
+;   bits 5-4 = metatile 1
+;   bits 3-2 = metatile 2
+;   bits 1-0 = metatile 3
+;
+; Writes the TOP row (2 tiles each metatile => 8 tiles total)
+; ============================================================
+.proc emit_four_top
+  STA packed_byte
+
+  ; metatile 0
+  LDA packed_byte
+  AND #%11000000
+  LSR A
+  LSR A
+  LSR A
+  LSR A
+  LSR A
+  LSR A
+  JSR emit_top_pair
+
+  ; metatile 1
+  LDA packed_byte
+  AND #%00110000
+  LSR A
+  LSR A
+  LSR A
+  LSR A
+  JSR emit_top_pair
+
+  ; metatile 2
+  LDA packed_byte
+  AND #%00001100
+  LSR A
+  LSR A
+  JSR emit_top_pair
+
+  ; metatile 3
+  LDA packed_byte
+  AND #%00000011
+  JSR emit_top_pair
+
+  RTS
+.endproc
+
+
+; ============================================================
+; Same as emit_four_top, but writes the BOTTOM row
+; ============================================================
+.proc emit_four_bottom
+  STA packed_byte
+
+  ; metatile 0
+  LDA packed_byte
+  AND #%11000000
+  LSR A
+  LSR A
+  LSR A
+  LSR A
+  LSR A
+  LSR A
+  JSR emit_bottom_pair
+
+  ; metatile 1
+  LDA packed_byte
+  AND #%00110000
+  LSR A
+  LSR A
+  LSR A
+  LSR A
+  JSR emit_bottom_pair
+
+  ; metatile 2
+  LDA packed_byte
+  AND #%00001100
+  LSR A
+  LSR A
+  JSR emit_bottom_pair
+
+  ; metatile 3
+  LDA packed_byte
+  AND #%00000011
+  JSR emit_bottom_pair
+
+  RTS
+.endproc
+
+
+; ============================================================
+; A = metatile ID (0..3)
+; Write top-left, top-right
+; ============================================================
+.proc emit_top_pair
+  ASL A
+  ASL A
+  TAX
+
+  LDA metatile_lut + 0, X
+  STA PPUDATA
+  LDA metatile_lut + 1, X
+  STA PPUDATA
+
+  RTS
+.endproc
+
+
+; ============================================================
+; A = metatile ID (0..3)
+; Write bottom-left, bottom-right
+; ============================================================
+.proc emit_bottom_pair
+  ASL A
+  ASL A
+  TAX
+
+  LDA metatile_lut + 2, X
+  STA PPUDATA
+  LDA metatile_lut + 3, X
+  STA PPUDATA
+
+  RTS
+.endproc
+
 
 .segment "VECTORS"
 .addr nmi_handler, reset_handler, irq_handler
 
+
 .segment "RODATA"
+
 palettes:
-  .byte $0F, $0F, $0F, $0F   ; BG pal 0 – black background
-  .byte $0F, $0F, $0F, $0F   ; BG pal 1
-  .byte $0F, $0F, $0F, $0F   ; BG pal 2
-  .byte $0F, $0F, $0F, $0F   ; BG pal 3
-  .byte $0F, $18, $16, $27   ; Sprite pal 0 – black / red / skin
-  .byte $0F, $18, $16, $27   ; Sprite pal 1
-  .byte $0F, $18, $16, $27   ; Sprite pal 2
-  .byte $0F, $18, $16, $27   ; Sprite pal 3
+  ; Background color $2A shared as universal background
+  ; Palette 0: hard wall / border
+  .byte $2A, $30, $10, $00
+  ; Palette 1: soft block
+  .byte $2A, $28, $17, $07
+  ; Palette 2: unused
+  .byte $2A, $2A, $1A, $0A
+  ; Palette 3: unused
+  .byte $2A, $21, $11, $01
+
+  ; Sprite palettes (not used)
+  .byte $0F, $20, $00, $00
+  .byte $0F, $00, $00, $00
+  .byte $0F, $00, $00, $00
+  .byte $0F, $00, $00, $00
+
+
+; ============================================================
+; Metatile lookup table
+; Each entry = 4 tiles:
+;   top-left, top-right, bottom-left, bottom-right
+; ============================================================
+metatile_lut:
+  .byte $00, $00, $00, $00   ; 00 = floor
+  .byte $04, $05, $06, $07   ; 01 = hard wall
+  .byte $08, $09, $0A, $0B   ; 10 = soft block
+  .byte $00, $00, $00, $00   ; 11 = unused
+
+
+; ============================================================
+; 2-bit packed map
+;
+; Row layout is EXACTLY the same as the old uncompressed version.
+;
+; Encoding:
+;   00 = floor
+;   01 = hard wall
+;   10 = soft block
+;   11 = unused
+;
+; 4 metatiles per byte:
+;   [m0 m1 m2 m3] => bits [7:6][5:4][3:2][1:0]
+; ============================================================
+screen_map_2bit:
+  ; row 0  = full hard wall border
+  .byte $55, $55, $55, $55
+
+  ; row 1  = soft row B (spawn-safe)
+  ; [1,0,0,2] [2,2,0,2] [2,0,2,2] [2,0,0,1]
+  .byte $42, $A2, $8A, $81
+
+  ; row 2  = pillar row
+  ; [1,0,1,0] [1,0,1,0] [1,0,1,0] [1,0,1,1]
+  .byte $44, $44, $44, $45
+
+  ; row 3  = soft row A
+  ; [1,2,2,0] [2,2,0,2] [0,2,2,0] [2,2,0,1]
+  .byte $68, $A2, $28, $A1
+
+  ; row 4  = pillar row
+  .byte $44, $44, $44, $45
+
+  ; row 5  = soft row B
+  .byte $42, $A2, $8A, $81
+
+  ; row 6  = pillar row
+  .byte $44, $44, $44, $45
+
+  ; row 7  = soft row A
+  .byte $68, $A2, $28, $A1
+
+  ; row 8  = pillar row
+  .byte $44, $44, $44, $45
+
+  ; row 9  = soft row B
+  .byte $42, $A2, $8A, $81
+
+  ; row 10 = pillar row
+  .byte $44, $44, $44, $45
+
+  ; row 11 = soft row A
+  .byte $68, $A2, $28, $A1
+
+  ; row 12 = pillar row
+  .byte $44, $44, $44, $45
+
+  ; row 13 = soft row B (spawn-safe)
+  .byte $42, $A2, $8A, $81
+
+  ; row 14 = full hard wall border
+  .byte $55, $55, $55, $55
+
+
+; ============================================================
+; Attribute table rows
+; Same values as original implementation
+; ============================================================
+attr_row_even:
+  .byte %01000000, %01010000, %01010000, %01010000
+  .byte %01010000, %01010000, %01010000, %00010000
+
+attr_row_odd:
+  .byte %01000000, %01010000, %01010000, %01010000
+  .byte %01010000, %01010000, %01010000, %00010000
+
 
 .segment "CHR"
-.incbin "mario.chr", 0, $2000  ; first 8KB only (NEXXT exports duplicate banks)
+.incbin "graphics.chr"
